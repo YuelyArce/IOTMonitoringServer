@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-bu+)8ft@9+qd*#e#f_s@wkyv2tmq+#!a^3j15h3kjk^jzksu0j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "ip.maquina.visualizador"]
+ALLOWED_HOSTS = ["localhost", "3.86.184.183"]
 
 
 # Application definition
@@ -96,7 +96,7 @@ DATABASES = {
         "NAME": "iot_data",  # Nombre de la base de datos
         "USER": "dbadmin",  # Nombre de usuario
         "PASSWORD": "uniandesIOT1234*",  # Contraseña
-        "HOST": "ip.maquina.db",  # Dirección IP de la base de datos
+        "HOST": "44.201.240.103",  # Dirección IP de la base de datos
         "PORT": "",  # Puerto de la base de datos
     }
 }
@@ -179,3 +179,8 @@ MQTT_USE_TLS = False
 # Ubicación del archivo de certificado para conexión TLS con el bróker MQTT
 CA_CRT_FILE = "ssl/ca.crt"
 CA_CRT_PATH = os.path.join(os.path.dirname(__file__), CA_CRT_FILE)
+
+# Configuración del Bróker MQTT
+MQTT_HOST = "54.211.242.155"  # IP de tu MQTT Broker en AWS
+MQTT_PORT = 1883
+TOPIC = "+/+/+/+/out"
