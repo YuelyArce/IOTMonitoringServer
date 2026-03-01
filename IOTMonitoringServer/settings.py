@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-bu+)8ft@9+qd*#e#f_s@wkyv2tmq+#!a^3j15h3kjk^jzksu0j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "3.86.184.183"]
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '54.166.109.171']
 
 
 # Application definition
@@ -91,16 +91,23 @@ WSGI_APPLICATION = 'IOTMonitoringServer.wsgi.application'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": "iot_data",  # Nombre de la base de datos
-        "USER": "dbadmin",  # Nombre de usuario
-        "PASSWORD": "uniandesIOT1234*",  # Contraseña
-        "HOST": "18.204.209.179",  # Dirección IP de la base de datos
-        "PORT": "",  # Puerto de la base de datos
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'iot_data',
+        'USER': 'dbadmin',
+        'PASSWORD': 'uniandesIOT1234*',
+        'HOST': '13.220.196.96',  # <-- IP actualizada de tu PostgresInstance
+        'PORT': '5432',
     }
 }
 
+# Activa la base de datos local (SQLite)
+# DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -156,10 +163,10 @@ LOGOUT_REDIRECT_URL = '/login/'
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 # Dirección del bróker MQTT
-MQTT_HOST = "ip.maquina.mqtt"
+MQTT_HOST = "44.212.43.178"
 
 # Puerto del bróker MQTT
-MQTT_PORT = 8082
+MQTT_PORT = 1883
 
 # Credenciales para el usuario suscriptor del bróker MQTT
 MQTT_USER = "admin"
@@ -181,6 +188,6 @@ CA_CRT_FILE = "ssl/ca.crt"
 CA_CRT_PATH = os.path.join(os.path.dirname(__file__), CA_CRT_FILE)
 
 # Configuración del Bróker MQTT
-MQTT_HOST = "54.211.242.155"  # IP de tu MQTT Broker en AWS
+MQTT_HOST = "44.212.43.178"  # IP de tu MQTT Broker en AWS
 MQTT_PORT = 1883
 TOPIC = "+/+/+/+/out"
