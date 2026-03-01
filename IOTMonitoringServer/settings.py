@@ -27,7 +27,14 @@ SECRET_KEY = 'django-insecure-bu+)8ft@9+qd*#e#f_s@wkyv2tmq+#!a^3j15h3kjk^jzksu0j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '54.166.109.171']
+ALLOWED_HOSTS = [
+    '52.55.243.240',  # IoT Viewer App
+    '44.202.43.24',   # IoT Receiver App
+    '3.95.255.85',    # MQTT Broker
+    '127.0.0.1', 
+    'localhost', 
+    '*'
+]
 
 
 # Application definition
@@ -96,7 +103,7 @@ DATABASES = {
         'NAME': 'iot_data',
         'USER': 'dbadmin',
         'PASSWORD': 'uniandesIOT1234*',
-        'HOST': '13.220.196.96',  # <-- IP actualizada de tu PostgresInstance
+        'HOST': '54.84.56.59',  # IP de tu instancia Postgres
         'PORT': '5432',
     }
 }
@@ -163,7 +170,7 @@ LOGOUT_REDIRECT_URL = '/login/'
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 # Dirección del bróker MQTT
-MQTT_HOST = "44.212.43.178"
+MQTT_HOST = "broker.hivemq.com"  # <--- IP ACTUALIZADA DEL BROKER
 
 # Puerto del bróker MQTT
 MQTT_PORT = 1883
@@ -176,18 +183,21 @@ MQTT_PASSWORD = "admin"
 MQTT_USER_PUB = "admin2"
 MQTT_PASSWORD_PUB = "admin2"
 
-# Tópico a suscribir. "+/+/+/+/out" se suscribe únicamente a los
-# tópicos con forma <país>/<estado>/<ciudad>/<usuario>/out.
+# --- CONFIGURACIÓN DEL BRÓKER MQTT ---
+# Usamos HiveMQ para asegurar conectividad en el video
+MQTT_HOST = "broker.hivemq.com"
+MQTT_PORT = 1883
+
+# Credenciales (HiveMQ público no las requiere pero se mantienen por estructura)
+MQTT_USER = "admin"
+MQTT_PASSWORD = "admin"
+MQTT_USER_PUB = "admin2"
+MQTT_PASSWORD_PUB = "admin2"
+
+# Tópico a suscribir
 TOPIC = "+/+/+/+/out"
 
-# Opción para habilitar la transmisión de mensajes segura
+# Seguridad y Certificados
 MQTT_USE_TLS = False
-
-# Ubicación del archivo de certificado para conexión TLS con el bróker MQTT
 CA_CRT_FILE = "ssl/ca.crt"
 CA_CRT_PATH = os.path.join(os.path.dirname(__file__), CA_CRT_FILE)
-
-# Configuración del Bróker MQTT
-MQTT_HOST = "44.212.43.178"  # IP de tu MQTT Broker en AWS
-MQTT_PORT = 1883
-TOPIC = "+/+/+/+/out"

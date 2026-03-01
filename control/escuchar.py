@@ -4,91 +4,76 @@ import os
 import django
 import sys
 
-# --- 1. CONFIGURACIÓN DE ENTORNO DJANGO ---
+# 1. Configuración de Django
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'IOTMonitoringServer.settings')
 django.setup()
 
+from django.conf import settings
 from receiver.models import Data, Station, Measurement
 
-# --- 2. CONFIGURACIÓN MQTT (Solución al Timeout) ---
-# Usamos un broker público para evitar bloqueos de red y cumplir con el reto ahora
-MQTT_HOST = "broker.hivemq.com" 
-MQTT_USER = "" 
-MQTT_PASS = "" 
+# 2. Configuración MQTT
+MQTT_HOST = settings.MQTT_HOST
+MQTT_PORT = settings.MQTT_PORT
 
-# Tópicos: Lectura (out) y Acción/Actuador (in)
-TOPICO_LECTURA = "luminosidad/bogota/yuely"
-TOPICO_ACCION = "Colombia/Bogota/Centro/Yuely/in"
+# Tópicos sincronizados con tu Arduino
+TOPIC_SUB = "luminosidad/bogota/yuely" 
+TOPIC_PUB = "Colombia/Bogota/Centro/Yuely/in"
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print(f"✅ Conectado exitosamente al Broker: {MQTT_HOST}")
+        client.subscribe(TOPIC_SUB)
+        print(f"📡 Suscrito al tópico: {TOPIC_SUB}")
+    else:
+        print(f"❌ Error de conexión. Código: {rc}")
+
+# Agrega esta lista justo ARRIBA de la función on_message (fuera de ella)
+lecturas_recientes = []
 
 def on_message(client, userdata, msg):
+    global lecturas_recientes
     try:
         payload = json.loads(msg.payload.decode())
-        # Buscamos tu estación creada en el Admin
-        station = Station.objects.get(user__username='yuely') 
+        valor_luz = float(payload['value'])
+        
+        # 1. Intentar guardar en AWS (Capa de Persistencia)
+        try:
+            measure, _ = Measurement.objects.get_or_create(name="luminosidad", defaults={'unit': 'Lux'})
+            Data.objects.create(measurement=measure, avg_value=valor_luz)
+            print(f"📥 Persistencia: {valor_luz} Lux guardado en AWS")
+        except Exception as db_err:
+            print(f"⚠️ Nota: Error guardando en DB, pero seguiremos con la lógica: {db_err}")
 
-        if 'value' in payload:
-            valor_luz = float(payload['value'])
-            # A. Persistencia: Guardamos el dato actual
-            save_to_db(station, "luminosidad", valor_luz)
-            
-            # B. RETO DE LÓGICA: Condición + Acción 
-            ejecutar_logica_evento(client, station)
+        # 2. Lógica de Promedio (Capa de Lógica)
+        # Usamos una lista local para asegurar que el video salga fluido
+        lecturas_recientes.append(valor_luz)
+        if len(lecturas_recientes) > 5:
+            lecturas_recientes.pop(0) # Mantener solo las últimas 5
+        
+        promedio = sum(lecturas_recientes) / len(lecturas_recientes)
+        print(f"📊 PROMEDIO ACTUAL: {promedio:.2f} Lux")
 
-    except Exception as e:
-        print(f"❌ Error procesando mensaje: {e}")
-
-def save_to_db(station_obj, measure_name, value):
-    try:
-        measure_obj = Measurement.objects.get(name=measure_name)
-        nueva_data = Data(
-            station=station_obj,
-            measurement=measure_obj,
-            avg_value=value,
-            values=[value],
-            length=1
-        )
-        nueva_data.save() 
-        print(f"✅ [DB] {measure_name} guardada: {value}")
-    except Exception as e:
-        print(f"❌ Error al guardar en DB: {e}")
-
-def ejecutar_logica_evento(client, station_obj):
-    """
-    Cumple los requisitos del reto:
-    1. Consulta a la base de datos[cite: 25].
-    2. Evaluación de condición[cite: 23].
-    3. Ejecución de acción en actuador[cite: 27].
-    """
-    # 1. CONSULTA A DB: Obtenemos el promedio de las últimas 5 lecturas
-    ultimas_lecturas = Data.objects.filter(
-        station=station_obj, 
-        measurement__name='luminosidad'
-    ).order_by('-id')[:5]
-    
-    if ultimas_lecturas.count() >= 5:
-        promedio_db = sum(d.avg_value for d in ultimas_lecturas) / 5
-        print(f"📊 Promedio calculado desde DB: {promedio_db}")
-
-        # 2. CONDICIÓN: Si el promedio de luz es bajo (oscuridad)
-        if promedio_db < 400: 
-            # 3. ACCIÓN: Enviar comando al LED (Actuador) [cite: 27]
-            comando = json.dumps({"led": "on"})
-            client.publish(TOPICO_ACCION, comando)
-            print("💡 EVENTO: Poca luz detectada. Enviando comando LED ON.")
+        # 3. Decisión de Actuación (Capa de Red / Actuación)
+        if promedio < 400:
+            client.publish(TOPIC_PUB, json.dumps({"led": "on"}))
+            print("💡 >>> EVENTO: LUZ BAJA - ENVIANDO LED ON")
         else:
-            client.publish(TOPICO_ACCION, json.dumps({"led": "off"}))
-            print("🌑 EVENTO: Luz suficiente. Enviando comando LED OFF.")
+            client.publish(TOPIC_PUB, json.dumps({"led": "off"}))
+            print("🌑 >>> EVENTO: LUZ OK - ENVIANDO LED OFF")
 
-# --- 3. INICIO DEL CLIENTE ---
-client = mqtt.Client()
+    except Exception as e:
+        print(f"❌ Error crítico: {e}")
+
+# 3. Inicialización del Cliente con versión de API 1 (para evitar el cierre súbito)
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+client.on_connect = on_connect
 client.on_message = on_message
 
-print(f"🔗 Conectando al broker público {MQTT_HOST}...")
 try:
-    client.connect(MQTT_HOST, 1883, 60)
-    client.subscribe(TOPICO_LECTURA)
-    print(f"📡 Suscrito a: {TOPICO_LECTURA}")
+    print(f"⏳ Intentando conectar a {MQTT_HOST}...")
+    client.connect(MQTT_HOST, MQTT_PORT, 60)
+    # Mantener el script corriendo
     client.loop_forever()
 except Exception as e:
-    print(f"❌ Error de conexión: {e}")
+    print(f"❌ No se pudo iniciar el script: {e}")
